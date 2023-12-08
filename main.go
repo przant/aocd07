@@ -16,21 +16,47 @@ type Hand struct {
     Bid   int
 }
 
+const (
+    HightCard = iota
+    OnePair
+    TwoPair
+    ThreeOAK
+    FullHouse
+    FourOAK
+    FiveOAK
+)
+
 var (
     labelsMap = map[rune]rune{
-        '2': 'A',
-        '3': 'B',
-        '4': 'C',
-        '5': 'D',
-        '6': 'E',
-        '7': 'F',
-        '8': 'G',
-        '9': 'H',
-        'T': 'I',
-        'J': 'J',
-        'Q': 'K',
-        'K': 'L',
-        'A': 'M',
+        'J': 'A',
+        '2': 'B',
+        '3': 'C',
+        '4': 'D',
+        '5': 'E',
+        '6': 'F',
+        '7': 'G',
+        '8': 'H',
+        '9': 'I',
+        'T': 'K',
+        'Q': 'L',
+        'K': 'M',
+        'A': 'N',
+    }
+
+    revertMap = map[rune]rune{
+        'A': 'J',
+        'B': '2',
+        'C': '3',
+        'D': '4',
+        'E': '5',
+        'F': '6',
+        'G': '7',
+        'H': '8',
+        'I': '9',
+        'K': 'T',
+        'L': 'Q',
+        'M': 'K',
+        'N': 'A',
     }
 )
 
@@ -55,23 +81,7 @@ func main() {
             Cards: Cards,
             Bid:   Bid,
         }
-        switch {
-        case hc(hand.Cards):
-            hand.Rank = 1
-        case pair(hand.Cards):
-            hand.Rank = 2
-        case pair2(hand.Cards):
-            hand.Rank = 3
-        case kao3(hand.Cards):
-            hand.Rank = 4
-        case fh(hand.Cards):
-            hand.Rank = 5
-        case kao4(hand.Cards):
-            hand.Rank = 6
-        case kao5(hand.Cards):
-            hand.Rank = 7
-
-        }
+        handKind(&hand)
         hands = append(hands, hand)
     }
 
@@ -88,95 +98,59 @@ func main() {
     }
 
     for _, hand := range hands {
+        hand.Cards = strings.Map(func(r rune) rune { return revertMap[r] }, hand.Cards)
         fmt.Println(hand)
     }
     fmt.Println()
     fmt.Println(result)
 }
 
-func kao5(hand string) bool {
+func handKind(hand *Hand) {
     max := 0
-    labels := make(map[byte]int)
-    for i := 0; i < len(hand); i++ {
-        labels[hand[i]]++
-        if max < labels[hand[i]] {
-            max = labels[hand[i]]
+    labelMap := make(map[byte]int)
+    for i := 0; i < len(hand.Cards); i++ {
+        labelMap[hand.Cards[i]]++
+        if max < labelMap[hand.Cards[i]] {
+            max = labelMap[hand.Cards[i]]
         }
     }
 
-    return len(labels) == 1 && max == 5
-}
+    jkrs := labelMap['A']
 
-func kao4(hand string) bool {
-    max := 0
-    labels := make(map[rune]int)
-    for _, label := range hand {
-        labels[label]++
-        if max < labels[label] {
-            max = labels[label]
+    labels := len(labelMap)
+    switch {
+    case labels == 1 && max == 5:
+        hand.Rank = FiveOAK
+    case labels == 2 && max == 4:
+        hand.Rank = FourOAK
+    case labels == 2 && max == 3:
+        hand.Rank = FullHouse
+        if jkrs > 0 {
+            hand.Rank = FiveOAK
+        }
+    case labels == 3 && max == 3:
+        hand.Rank = ThreeOAK
+        if jkrs > 0 {
+            hand.Rank = FourOAK
+        }
+
+    case labels == 3 && max == 2:
+        hand.Rank = TwoPair
+        if jkrs == 1 {
+            hand.Rank = FullHouse
+        }
+        if jkrs == 2 {
+            hand.Rank = FourOAK
+        }
+    case labels == 4 && max == 2:
+        hand.Rank = OnePair
+        if jkrs == 1 || jkrs == 2 {
+            hand.Rank = ThreeOAK
+        }
+    case labels == 5 && max == 1:
+        hand.Rank = HightCard
+        if jkrs > 0 {
+            hand.Rank = OnePair
         }
     }
-
-    return len(labels) == 2 && max == 4
-}
-
-func fh(hand string) bool {
-    max := 0
-    labels := make(map[rune]int)
-    for _, label := range hand {
-        labels[label]++
-        if max < labels[label] {
-            max = labels[label]
-        }
-    }
-
-    return len(labels) == 2 && max == 3
-}
-
-func kao3(hand string) bool {
-    max := 0
-    labels := make(map[rune]int)
-    for _, label := range hand {
-        labels[label]++
-        if max < labels[label] {
-            max = labels[label]
-        }
-    }
-
-    return len(labels) == 3 && max == 3
-}
-
-func pair2(hand string) bool {
-    max := 0
-    labels := make(map[rune]int)
-    for _, label := range hand {
-        labels[label]++
-        if max < labels[label] {
-            max = labels[label]
-        }
-    }
-
-    return len(labels) == 3 && max == 2
-}
-
-func pair(hand string) bool {
-    max := 0
-    labels := make(map[rune]int)
-    for _, label := range hand {
-        labels[label]++
-        if max < labels[label] {
-            max = labels[label]
-        }
-    }
-
-    return len(labels) == 4 && max == 2
-}
-
-func hc(hand string) bool {
-    labels := make(map[rune]int)
-    for _, label := range hand {
-        labels[label]++
-    }
-
-    return len(labels) == 5
 }
